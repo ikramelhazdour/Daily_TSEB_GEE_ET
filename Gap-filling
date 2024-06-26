@@ -13,7 +13,7 @@ The resulting ETa data can be exported by region into a CSV file.
 var startDate = '2016-01-01';
 var endDate = '2023-12-31';
 
-// Import regions
+// Import regions (upload your personal shapefile as an asset on GEE)
 var regions = ee.FeatureCollection('projects/ee-ikramelhazdour/assets/parcelles_chichaoua')
                                  .filter(ee.Filter.inList('id', [1, 2, 3, 4, 5]));
 
