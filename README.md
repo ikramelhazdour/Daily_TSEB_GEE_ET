@@ -1,4 +1,6 @@
-# **Overview**
+
+# **A GEE TSEB Workflow for Daily 30m Evapotranspiration (ET)**
+##**Overview**
 
 These algorithms constitute the workflow of a Google Earth Engine (GEE) implementation of the Two Source Energy Balance (TSEB) Model. This implementation uses an Artificial Neural Network to retrieve Leaf Area Index (LAI), a simple regression relationship with NDVI to retrieve Canopy Height, and a gap-filling approach based on reference ET and Kc to produce daily Evapotranspiration.
 
