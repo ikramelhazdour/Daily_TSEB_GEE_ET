@@ -1,6 +1,6 @@
 
 """
-@original author: Olive Lopez
+@original author: Oliver Lopez
 @Modifications: Ikram EL HAZDOUR 
 **Modifications**:
     Modifications include the application of a threshold for resistances, and using LAI and CH as bands
