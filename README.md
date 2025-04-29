@@ -11,7 +11,7 @@ These algorithms constitute the workflow of a Google Earth Engine (GEE) implemen
   ## **Requirements**
 - The users are invited to download the geeet package: https://github.com/kaust-halo/geeet, and replace the TSEB module with the tseb.py module.
 
-## **Authors (software) & Aknowledgment**
+## **Authors (software) & Aknowledgement**
 - Ikram EL HAZDOUR (PhD candidate at CESBIO and UCAM)
 - Michel LE PAGE (Researcher at CESBIO IRD)
 - Oliver LOPEZ (Researcher at KAUST)
