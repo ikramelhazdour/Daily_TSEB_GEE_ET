@@ -131,8 +131,7 @@ def applyScaleFactorsL8L9(image):
    bnir = opticalBands.select('SR_B5').multiply(0.373)
    bswir = opticalBands.select('SR_B6').multiply(0.085)
    bswir2 = opticalBands.select('SR_B7').multiply(0.072)
-   #albedo = bblue.add(bred).add(bnir).add(bswir).add(bswir2).subtract(0.0018)
-   albedo = bblue.multiply(0).add(0.13)
+   albedo = bblue.add(bred).add(bnir).add(bswir).add(bswir2).subtract(0.0018)
    albedo = albedo.rename('albedo')
    NDVI = opticalBands.normalizedDifference(['SR_B5', 'SR_B4']).rename('NDVI')
    #Compute EVI for L8
@@ -183,8 +182,7 @@ def applyScaleFactorsL5L7(image):
    bnir = opticalBands.select('SR_B4').multiply(0.373)
    bswir = opticalBands.select('SR_B5').multiply(0.085)
    bswir2 = opticalBands.select('SR_B7').multiply(0.072)
-  # albedo = bblue.add(bred).add(bnir).add(bswir).add(bswir2).subtract(0.0018)
-   albedo = bblue.multiply(0).add(0.13)
+   albedo = bblue.add(bred).add(bnir).add(bswir).add(bswir2).subtract(0.0018)
    albedo = albedo.rename('albedo')
    NDVI = opticalBands.normalizedDifference(['SR_B4', 'SR_B3']).rename('NDVI')
    #Compute EVI for L5
