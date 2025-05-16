@@ -164,7 +164,7 @@ def applyScaleFactorsL8L9(image):
 
 print('3')
 
-#=================Scale factors L5L7====================================
+#=================Scale factors L5L7 + Harmonization of TM & ETM to OLI==============================
 """
 Scale Landsat surface reflectance data
 Select and rename the radiometric temperature (B6)
@@ -172,57 +172,60 @@ Compute shortwave albedo using the empirical coefficients
 from Liang et al. (2001)
 Compute NDVI 
 """
-def applyScaleFactorsL5L7(image):
-   opticalBands = image.select('SR_B.').multiply(0.0000275).add(-0.2)
-   thermalBands = image.select('ST_B6').multiply(0.00341802).add(149.0)
+def applyScaleFactorsL5L7(image) :
+  #scale factors 
+   opticalBands = image.select('SR_B.').multiply(0.0000275).add(-0.2);
+   thermalBands = image.select('ST_B6').multiply(0.00341802).add(149.0);
    Tr = thermalBands.rename('radiometric_temperature')
-   # ============Liang et al., 2001==================================
-   bblue = opticalBands.select('SR_B1').multiply(0.356)
-   bred = opticalBands.select('SR_B3').multiply(0.130)
-   bnir = opticalBands.select('SR_B4').multiply(0.373)
-   bswir = opticalBands.select('SR_B5').multiply(0.085)
-   bswir2 = opticalBands.select('SR_B7').multiply(0.072)
-   albedo = bblue.add(bred).add(bnir).add(bswir).add(bswir2).subtract(0.0018)
-   albedo = albedo.rename('albedo')
-   NDVI = opticalBands.normalizedDifference(['SR_B4', 'SR_B3']).rename('NDVI')
-   #Compute EVI for L5
-   #EVI = 2.5 * ((Band 4 – Band 3) / (Band 4 + 6 * Band 3 – 7.5 * Band 1 + 1)). 
-   NIR =  opticalBands.select('SR_B4')
-   RED =  opticalBands.select('SR_B3')
-   BLUE = opticalBands.select('SR_B1')
-   EVI = ((NIR.subtract(RED)).divide(NIR.add(RED.multiply(6)).subtract(BLUE.multiply(7.5)).add(1))).multiply(2.5)
-   EVI = EVI.rename('EVI')
-   #F_g = (EVI.divide(NDVI)).multiply(1.2)
-   # F_g = F_g.rename('Fg')
-   # F_g = F_g.min(1).max(0)
-
-   #=============da Silva et al., 2016=========================
-   # bblue = opticalBands.select('SR_B1').multiply(0.300)
-   # bgreen = opticalBands.select('SR_B2').multiply(0.277)
-   # bred = opticalBands.select('SR_B3').multiply(0.233)
-   # bnir = opticalBands.select('SR_B4').multiply(0.143)
-   # bswir = opticalBands.select('SR_B5').multiply(0.036)
-   # bswir2 = opticalBands.select('SR_B6').multiply(0.012)
-   # # albedo = (0.300*SR_B1) + (0.277*SR_B2)+ (0.233*SR_B3)+ (0.143*SR_B4)+ (0.036*SR_B5)+ (0.012*SR_B7)
-   # albedo = bblue.add(bgreen).add(bred).add(bnir).add(bswir).add(bswir2)
-   # albedo = albedo.rename('albedo')
+   # Edges mask
+   mask3 = opticalBands.gt(0).reduce(ee.Reducer.min())
+   opticalBands = opticalBands.updateMask(mask3)
+  #rename bands so that L7 & L5 match L8
+   renamedBands = opticalBands.select(['SR_B1','SR_B2','SR_B3','SR_B4','SR_B5','SR_B7'], 
+                                      ['SR_B2','SR_B3','SR_B4','SR_B5','SR_B6','SR_B7'])
+  
+  #harmonization (RMA method)_Roy et al., 2016
+   slopes = ee.Image.constant([0.9785, 0.9542, 0.9825, 1.0073, 1.0171, 0.9949])
+   itcps = ee.Image.constant([-0.0095, -0.0016, -0.0022, -0.0021, -0.0030, 0.0029])
+  
+   harmonizedBands = renamedBands.multiply(slopes).add(itcps)
    scaled_image1 = (
-       image.addBands(opticalBands, overwrite=True) \
-                 .addBands(thermalBands, overwrite=True) \
-                 .addBands(Tr).addBands(albedo).addBands(NDVI).addBands(EVI) #.addBands(F_g)
+       image.addBands(thermalBands, overwrite=True) \
+                 .addBands(Tr)
+                 .addBands(harmonizedBands)
     )
- 
+
    return scaled_image1
 
-print('4')
+#=======Compute Indices outside the Scale factors function (to be mapped after the cloud mask) ;)=====
+def ComputeIndicesL7 (harmonizedBands):
+    # compute ALBEDO
+     bblue = harmonizedBands.select('SR_B2').multiply(0.356)
+     bred = harmonizedBands.select('SR_B4').multiply(0.130)
+     bnir = harmonizedBands.select('SR_B5').multiply(0.373)
+     bswir = harmonizedBands.select('SR_B6').multiply(0.085)
+     bswir2 = harmonizedBands.select('SR_B7').multiply(0.072)
+    
+     albedo = bblue.add(bred).add(bnir).add(bswir).add(bswir2).subtract(0.0018)
+     albedo = albedo.rename('albedo')
+     #NDVI
+     NDVI = harmonizedBands.normalizedDifference(['SR_B5', 'SR_B4']).rename('NDVI')
+     #FIPAR
+     FIPAR = NDVI.multiply(1).add(-0.05).rename('fipar')
+     NIR = harmonizedBands.select('SR_B5')
+     RED = harmonizedBands.select('SR_B4')
+     BLUE = harmonizedBands.select('SR_B2')
+     #EVI
+     EVI = ((NIR.subtract(RED)).divide(NIR.add(RED.multiply(6))
+                               .subtract(BLUE.multiply(7.5))
+                               .add(1))).multiply(2.5).rename('EVI')
+     
+     scaled_image2 = (
+         harmonizedBands.addBands(albedo).addBands(NDVI).addBands(EVI).addBands(FIPAR)
+      )
+     return scaled_image2
 
-# ****harmonize tm and etm+ to oli******
-def tm2oli (tm) :
-   slopes = ee.Image.constant([0.9785, 0.9542, 0.9825, 1.0073, 1.0171, 0.9949])
-   itcp = ee.Image.constant([-0.0095, -0.0016, -0.0022, -0.0021, -0.0030, 0.0029])
-   y = tm.select(['SR_B1','SR_B2','SR_B3','SR_B4','SR_B5','SR_B7'],['SR_B2','SR_B3','SR_B4','SR_B5','SR_B6','SR_B7']).set('system:time_start', tm.get('system:time_start'))
-   return y
-print('6')
+
 # ================== RENAME BANDS ======================
 def rename_bands_landsat(image):
     return image.select(['VAA', 'VZA', 'SAA', 'SZA'], ['viewAzimuthMean', 'viewZenithMean', 'sunAzimuthAngles', 'sunZenithAngles']).multiply(0.01)
@@ -262,7 +265,7 @@ L9_T1_TOA = L9_T1_TOA.select(['viewAzimuthMean', 'viewZenithMean', 'sunAzimuthAn
 #L9_T1_TOA = L9_T1_TOA.map(lambda img: img.multiply(0.01))
 
 #=====MERGE TOA COLLECTIONS ============================
-merged_TOA = L8_T1_TOA.merge(L9_T1_TOA).merge(L5_T1_TOA)#.merge(L7_T1_TOA)
+merged_TOA = L8_T1_TOA.merge(L9_T1_TOA).merge(L5_T1_TOA).merge(L7_T1_TOA)
 print('8')
 #===================LANDSAT 8 & 9 T1_L2================
 #======================================================
@@ -272,7 +275,7 @@ L5_T1_L2 = (ee.ImageCollection("LANDSAT/LT05/C02/T1_L2")
             .filterBounds(geometry)
             .map(applyScaleFactorsL5L7)
             .map(maskL7)
-            .map(tm2oli))
+            .map(ComputeIndicesL7))
 
 
 L7_T1_L2 = (ee.ImageCollection("LANDSAT/LE07/C02/T1_L2")
@@ -280,7 +283,7 @@ L7_T1_L2 = (ee.ImageCollection("LANDSAT/LE07/C02/T1_L2")
             .filterBounds(geometry)
             .map(applyScaleFactorsL5L7)
             .map(maskL7)
-            .map(tm2oli))
+            .map(ComputeIndicesL7))
 
 L8_T1_L2 = (ee.ImageCollection("LANDSAT/LC08/C02/T1_L2")
               .filterDate(startDate, endDate)
@@ -300,7 +303,7 @@ L9_T1_L2 = (ee.ImageCollection("LANDSAT/LC09/C02/T1_L2")
 
 
 #==========Merge L8 and L9 T1_L2 collections===========
-merged_L2 = L8_T1_L2.merge(L9_T1_L2).merge(L5_T1_L2)#.merge(L7_T1_L2)
+merged_L2 = L8_T1_L2.merge(L9_T1_L2).merge(L5_T1_L2).merge(L7_T1_L2)
 merged_L2 = merged_L2.map(add_datetime).map(add_datetime_day)
 print('9')
 
