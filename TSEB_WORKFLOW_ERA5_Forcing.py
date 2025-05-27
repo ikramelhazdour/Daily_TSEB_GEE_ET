@@ -184,9 +184,13 @@ def applyScaleFactorsL5L7(image) :
    renamedBands = opticalBands.select(['SR_B1','SR_B2','SR_B3','SR_B4','SR_B5','SR_B7'], 
                                       ['SR_B2','SR_B3','SR_B4','SR_B5','SR_B6','SR_B7'])
   
-  #harmonization (RMA method)_Roy et al., 2016
+  #*****Harmonization****************************************************************
+#(RMA method)_Roy et al., 2016
    slopes = ee.Image.constant([0.9785, 0.9542, 0.9825, 1.0073, 1.0171, 0.9949])
    itcps = ee.Image.constant([-0.0095, -0.0016, -0.0022, -0.0021, -0.0030, 0.0029])
+# OLS method coeffs.
+   slopes = ee.Image.constant([0.8474, 0.8483, 0.9047, 0.8462, 0.8937, 0.9071])
+   itcps = ee.Image.constant ([0.0003, 0.0088, 0.0061, 0.0412, 0.0254, 0.0172])
   
    harmonizedBands = renamedBands.multiply(slopes).add(itcps)
    scaled_image1 = (
